@@ -114,3 +114,11 @@ jobs:
         run: |
           docker push \
             209115427888.dkr.ecr.us-east-1.amazonaws.com/gc-bank:${GITHUB_SHA}
+
+      - name: Trivy Docker Image Scan
+        run: |
+          trivy image \
+            --severity HIGH,CRITICAL \
+            --exit-code 1 \
+            --ignore-unfixed \
+            gc-bank:${GITHUB_SHA}      
