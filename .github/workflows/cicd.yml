@@ -61,6 +61,44 @@ jobs:
         run: |
           docker build -t gc-bank:${GITHUB_SHA} .
 
+      # NEW STEP: OPA Docker Security Validation
+      - name: OPA Docker Policy Validation
+        run: |
+          echo "Checking OPA installation..."
+          opa version
+
+          echo "Inspecting Docker image..."
+          docker image inspect gc-bank:${GITHUB_SHA} \
+            --format '{{json .Config}}' > docker-config.json
+
+          echo "Preparing OPA input..."
+          jq --arg tag "${GITHUB_SHA}" \
+            '{
+              exposed_ports: (.ExposedPorts // {}),
+              cmd: (.Cmd // []),
+              tag: $tag
+            }' docker-config.json > opa-input.json
+
+          echo "Evaluating Docker security policy..."
+
+          result=$(opa eval \
+            --data opa/docker_policy.rego \
+            --input opa-input.json \
+            --format raw \
+            "data.docker.security.allow")
+
+          if [ "$result" != "true" ]; then
+            echo "OPA POLICY VALIDATION FAILED"
+            opa eval \
+              --data opa/docker_policy.rego \
+              --input opa-input.json \
+              --format pretty \
+              "data.docker.security.deny"
+            exit 1
+          fi
+
+          echo "OPA POLICY VALIDATION PASSED"
+
       - name: Login to Amazon ECR
         run: |
           aws ecr get-login-password --region us-east-1 \
