@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
 
     steps:
       # Step 1: Checkout source code
@@ -35,4 +35,13 @@ jobs:
 
       # Step 4: Maven build
       - name: Build with Maven
-        run: mvn compile
+        run: mvn clean verify
+
+      # Step 5: SonarQube scan
+      - name: SonarQube Scan
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+        run: |
+          -Dsonar.projectKey=GC-Bank \
+          -Dsonar.projectName=GC-Bank
